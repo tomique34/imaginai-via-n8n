@@ -24,9 +24,11 @@ npm run preview
 
 ## Environment Configuration
 
-The app requires a `GEMINI_API_KEY` in `.env.local` for API access. The Vite config exposes this as `process.env.GEMINI_API_KEY` and `process.env.API_KEY`.
+The app requires environment variables in `.env.local`:
+- `GEMINI_API_KEY`: Your Gemini API key for AI image generation
+- `N8N_WEBHOOK_URL`: Your n8n webhook base URL (e.g., `https://your-n8n-instance.com/webhook`)
 
-**Important**: Update `services/geminiService.ts:4` with your actual n8n webhook URL before running. The placeholder is `https://your-n8n-webhook-url.com/webhook`.
+Copy `.env.example` to `.env.local` and fill in your actual values. The Vite config exposes these as `process.env.GEMINI_API_KEY`, `process.env.API_KEY`, and `process.env.N8N_WEBHOOK_URL`.
 
 ## Architecture
 

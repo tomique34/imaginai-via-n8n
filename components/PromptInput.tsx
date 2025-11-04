@@ -9,6 +9,15 @@ interface PromptInputProps {
 
 export const PromptInput: React.FC<PromptInputProps> = ({ value, onChange, disabled }) => {
   const { t } = useI18n();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    // Limit input length in real-time (2000 character max)
+    if (newValue.length <= 2000) {
+      onChange(e);
+    }
+  };
+
   return (
     <div className="relative">
       <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -28,8 +37,9 @@ export const PromptInput: React.FC<PromptInputProps> = ({ value, onChange, disab
       <input
         type="text"
         value={value}
-        onChange={onChange}
+        onChange={handleChange}
         disabled={disabled}
+        maxLength={2000}
         placeholder={t('promptPlaceholder')}
         className="w-full bg-white/5 border border-white/10 rounded-xl shadow-sm text-stone-200 placeholder-stone-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 pl-11 pr-4 py-4 text-md"
       />

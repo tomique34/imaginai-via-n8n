@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { UploadedFile } from '../types';
 import { useI18n } from '../context/I18nContext';
+import { validateImageFile, validateBase64Size } from '../utils/fileValidation';
 
 interface ImageUploaderProps {
   onImageUpload: (file: UploadedFile | null) => void;
@@ -20,25 +21,47 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, dis
   const [isDragging, setIsDragging] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  // Cleanup function for object URL to prevent memory leaks
+  const cleanupObjectUrl = useCallback(() => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  }, []);
 
   const handleFile = useCallback(async (file: File) => {
-    if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
-      alert(t('uploaderAlertUnsupported'));
+    // Enhanced file validation with magic number checks
+    const validation = await validateImageFile(file);
+
+    if (!validation.valid) {
+      alert(validation.error);
       return;
     }
-    if (file.size > 10 * 1024 * 1024) { // 10MB
-      alert(t('uploaderAlertTooLarge'));
-      return;
-    }
+
     try {
       const base64Data = await fileToBase64(file);
+
+      // Validate base64 size
+      if (!validateBase64Size(base64Data)) {
+        alert('Processed image is too large. Please use a smaller image.');
+        return;
+      }
+
       onImageUpload({ data: base64Data, mimeType: file.type });
-      setImagePreview(URL.createObjectURL(file));
+
+      // Cleanup old URL before creating new one
+      cleanupObjectUrl();
+
+      const newUrl = URL.createObjectURL(file);
+      objectUrlRef.current = newUrl;
+      setImagePreview(newUrl);
     } catch (error) {
       console.error('Error converting file to base64', error);
       alert(t('uploaderAlertProcessError'));
     }
-  }, [onImageUpload, t]);
+  }, [onImageUpload, t, cleanupObjectUrl]);
 
   const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -67,13 +90,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, dis
     }
   };
   
-  const onRemoveImage = () => {
+  const onRemoveImage = useCallback(() => {
       onImageUpload(null);
+      cleanupObjectUrl();
       setImagePreview(null);
       if(fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-  }
+  }, [onImageUpload, cleanupObjectUrl]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupObjectUrl();
+    };
+  }, [cleanupObjectUrl]);
 
   const baseClasses = "relative w-full p-6 border-2 border-dashed border-white/20 rounded-xl transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer";
   const draggingClasses = "border-purple-400 bg-purple-900/20 scale-105";

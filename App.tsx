@@ -8,6 +8,8 @@ import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { generateImage, editImage } from './services/geminiService';
 import type { UploadedFile } from './types';
 import { useI18n } from './context/I18nContext';
+import { validatePrompt } from './utils/validation';
+import { useRateLimit } from './hooks/useRateLimit';
 
 const App: React.FC = () => {
   const { t } = useI18n();
@@ -16,6 +18,12 @@ const App: React.FC = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Rate limiting: 5 requests per minute
+  const { checkRateLimit } = useRateLimit({
+    maxRequests: 5,
+    windowMs: 60 * 1000,
+  });
 
   const handleImageUpload = (file: UploadedFile | null) => {
     setUploadedFile(file);
@@ -27,12 +35,26 @@ const App: React.FC = () => {
   const handleGenerate = useCallback(async () => {
     if (!prompt || isLoading) return;
 
+    // Validate prompt
+    const validation = validatePrompt(prompt);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid prompt');
+      return;
+    }
+
+    // Check rate limit
+    const rateLimitCheck = checkRateLimit();
+    if (!rateLimitCheck.allowed) {
+      setError(`Rate limit exceeded. Please wait ${rateLimitCheck.retryAfter} seconds before trying again.`);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setGeneratedImage(null);
 
     try {
-      const imageB64 = await generateImage(prompt);
+      const imageB64 = await generateImage(validation.sanitized || prompt);
       setGeneratedImage(`data:image/png;base64,${imageB64}`);
     } catch (e) {
       console.error(e);
@@ -40,17 +62,31 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, isLoading, t]);
+  }, [prompt, isLoading, t, checkRateLimit]);
 
   const handleEdit = useCallback(async () => {
     if (!prompt || !uploadedFile || isLoading) return;
+
+    // Validate prompt
+    const validation = validatePrompt(prompt);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid prompt');
+      return;
+    }
+
+    // Check rate limit
+    const rateLimitCheck = checkRateLimit();
+    if (!rateLimitCheck.allowed) {
+      setError(`Rate limit exceeded. Please wait ${rateLimitCheck.retryAfter} seconds before trying again.`);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
     setGeneratedImage(null);
 
     try {
-      const imageB64 = await editImage(prompt, uploadedFile);
+      const imageB64 = await editImage(validation.sanitized || prompt, uploadedFile);
       setGeneratedImage(`data:image/png;base64,${imageB64}`);
     } catch (e) {
       console.error(e);
@@ -58,25 +94,35 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, uploadedFile, isLoading, t]);
+  }, [prompt, uploadedFile, isLoading, t, checkRateLimit]);
   
   const canGenerate = prompt.trim().length > 0 && !isLoading;
   const canEdit = canGenerate && uploadedFile !== null;
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-200 font-sans antialiased relative">
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 text-stone-200 font-sans antialiased relative overflow-hidden">
+      {/* Animated background gradients - slowly migrating blobs */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob-slow"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-pink-500/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob-slow animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-500/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob-slow animation-delay-4000"></div>
+        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-violet-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob-slow animation-delay-6000"></div>
+      </div>
+
+      {/* Radial gradient overlay */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(139,92,246,0.15),rgba(255,255,255,0))]"></div>
+
       <LanguageSwitcher />
       <main className="container mx-auto px-4 py-8 md:py-16 relative z-10 flex flex-col items-center">
         <Header />
         <div className="w-full max-w-2xl mt-12 space-y-6">
           <PromptInput value={prompt} onChange={(e) => setPrompt(e.target.value)} disabled={isLoading} />
           <ImageUploader onImageUpload={handleImageUpload} disabled={isLoading} />
-          
+
           {error && <p className="text-red-400 text-center bg-red-900/20 p-3 rounded-lg">{error}</p>}
-          
+
           <ActionButtons onGenerate={handleGenerate} onEdit={handleEdit} canGenerate={canGenerate} canEdit={canEdit} isLoading={isLoading}/>
-          
+
           <h2 className="text-2xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-stone-300 to-stone-500 pt-8">
             {t('generatedImageTitle')}
           </h2>

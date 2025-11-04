@@ -3,11 +3,60 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ImaginAI</title>
+
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://aistudiocdn.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+
+    <title>ImaginAI - AI Image Generation</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body {
         background-color: #0c0a09;
+      }
+
+      /* Slow migrating blob effect */
+      @keyframes blob-slow {
+        0% {
+          transform: translate(0px, 0px) scale(1);
+        }
+        25% {
+          transform: translate(100px, -80px) scale(1.15);
+        }
+        50% {
+          transform: translate(-60px, 60px) scale(0.95);
+        }
+        75% {
+          transform: translate(80px, 40px) scale(1.05);
+        }
+        100% {
+          transform: translate(0px, 0px) scale(1);
+        }
+      }
+
+      .animate-blob-slow {
+        animation: blob-slow 20s ease-in-out infinite;
+      }
+
+      .animation-delay-2000 {
+        animation-delay: 2s;
+      }
+
+      .animation-delay-3000 {
+        animation-delay: 3s;
+      }
+
+      .animation-delay-4000 {
+        animation-delay: 4s;
+      }
+
+      .animation-delay-6000 {
+        animation-delay: 6s;
       }
     </style>
   <script type="importmap">

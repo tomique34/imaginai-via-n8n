@@ -11,8 +11,10 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // SECURITY NOTE: Only expose N8N_WEBHOOK_URL to client-side
+        // API keys should NEVER be exposed in client-side code
+        // They must be kept on the server side (e.g., in n8n workflows)
+        'process.env.N8N_WEBHOOK_URL': JSON.stringify(env.N8N_WEBHOOK_URL)
       },
       resolve: {
         alias: {
