@@ -1,0 +1,5 @@
+{
+  "name": "ImaginAI",
+  "description": "ImaginAI - An AI-powered image studio where you can generate new images from text prompts or upload your own photos and use text instructions to edit them.",
+  "requestFramePermissions": []
+}
